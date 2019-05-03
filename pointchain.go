@@ -79,38 +79,36 @@ func (c *chain) linkSegment(s segment) bool {
 
 // Links another chain onto this point chain.
 func (c *chain) linkChain(other *chain) bool {
+	return c.linkChainWithTolerance(other, 0)
+}
 
+// Links another chain onto this point chain with some tolerance for floating point imprecision.
+func (c *chain) linkChainWithTolerance(other *chain, tol float64) bool {
 	front := c.points[0]
 	back := c.points[len(c.points)-1]
 
 	otherFront := other.points[0]
 	otherBack := other.points[len(other.points)-1]
 
-	if otherFront.Equals(back) {
+	if otherFront.EqualWithin(back, tol) {
 		c.points = append(c.points, other.points[1:]...)
 		goto success
-		//c.points = append(c.points[:len(c.points)-1], other.points...)
-		//return true
 	}
 
-	if otherBack.Equals(front) {
+	if otherBack.EqualWithin(front, tol) {
 		c.points = append(other.points, c.points[1:]...)
 		goto success
-		//return true
 	}
 
-	if otherFront.Equals(front) {
+	if otherFront.EqualWithin(front, tol) {
 		// Remove the first element, and join to reversed chain.points
 		c.points = append(reversed(other.points), c.points[1:]...)
 		goto success
-		//return true
 	}
 
-	if otherBack.Equals(back) {
+	if otherBack.EqualWithin(back, tol) {
 		c.points = append(c.points[:len(c.points)-1], reversed(other.points)...)
 		goto success
-		//c.points = append(other.points, reversed(c.points)...)
-		//return true
 	}
 
 	return false
@@ -118,6 +116,25 @@ func (c *chain) linkChain(other *chain) bool {
 success:
 	other.points = []Point{}
 	return true
+}
+
+// Closes the chain within a floating point tolerance.
+func (c *chain) closeWithTolerance(tol float64) bool {
+	front := c.points[0]
+	back := c.points[len(c.points)-1]
+
+	if front.Equals(back) {
+		c.points = c.points[1:] // Remove the redundant point
+		c.closed = true
+		return true
+	}
+
+	if front.EqualWithin(back, tol) {
+		// Keep both points.
+		c.closed = true
+		return true
+	}
+	return false
 }
 
 func reversed(list []Point) []Point {

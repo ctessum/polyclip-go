@@ -83,6 +83,7 @@ func (c *connector) toPolygon() Polygon {
 			poly.Add(con)
 		}
 	} else {
+		c.healOpenChains()
 		for _, chain := range c.closedPolys {
 			con := Contour{}
 			for _, p := range chain.points {
@@ -92,4 +93,29 @@ func (c *connector) toPolygon() Polygon {
 		}
 	}
 	return poly
+}
+
+// Attempts to connect and close open chains by merging or connecting endpoints
+// within a floating point tolerance. It's important that this only be done as the last step,
+// (and not while segments are being added) as closing chains too early can result in orphaning
+// segments that are yet to be added.
+func (c *connector) healOpenChains() {
+	const tol = 3e-14
+	for j := len(c.openPolys) - 2; j >= 0; j-- {
+		chain := &c.openPolys[j]
+		for i := len(c.openPolys) - 1; i > j; i-- {
+			if chain.linkChainWithTolerance(&c.openPolys[i], tol) {
+				// delete
+				c.openPolys = append(c.openPolys[:i], c.openPolys[i+1:]...)
+			}
+		}
+	}
+	for j := len(c.openPolys) - 1; j >= 0; j-- {
+		chain := &c.openPolys[j]
+		if chain.closeWithTolerance(tol) {
+			// move the chain from openPolys to closedPolys
+			c.closedPolys = append(c.closedPolys, c.openPolys[j])
+			c.openPolys = append(c.openPolys[:j], c.openPolys[j+1:]...)
+		}
+	}
 }

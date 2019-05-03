@@ -29,3 +29,17 @@ func TestChainLinkChain(t *T) {
 	verify(t, a.linkChain(&b), "Expected being able to link chains")
 	verify(t, len(a.points) == 5, "Expected len==5, got %d", len(a.points))
 }
+
+func TestChainLinkChainWithTolerance(t *T) {
+	a := chain{points: []Point{{0, 1}, {0, 2}, {0, 3}, {1.000000000000001, 1.000000000000001}}}
+	b := chain{points: []Point{{1, 1}, {1, 2}}}
+	verify(t, a.linkChainWithTolerance(&b, 3e-14), "Expected being able to link chains")
+	verify(t, len(a.points) == 5, "Expected len==5, got %d", len(a.points))
+}
+
+func TestChainCloseWithTolerance(t *T) {
+	a := chain{points: []Point{{0, 1}, {0, 2}, {0, 3}, {0.000000000000001, 1.000000000000001}}}
+	verify(t, a.closeWithTolerance(3e-14), "Expected being able to close the chains")
+	verify(t, a.closed, "Expected chain to be closed.")
+	verify(t, len(a.points) == 4, "Expected len==4, got %d", len(a.points)) // Note: points are connected, not merged.
+}
